@@ -1,3 +1,51 @@
+== Deep Agents
+
+4 central principles these “deep” agents have in common
+
+1. Planning
+2. Offload Context (Filesystem)
+3. Task Delegation (Sub-agents)
+4. Careful / Extensive Prompt Engineering
+
+== Building effective agents
+
+Deep agents are built on two pillars:
+
+1. Workflow: Create scaffolding of predefined code path around LLM 
+2. Agents:on the other hand, are systems where LLMs dynamically direct their own processes and tool usage, maintaining control over how they accomplish tasks.
+
+=== Building blocks, workflows, and agents
+
+We'll start with our foundational building block—the augmented LLM—and progressively increase complexity, from simple compositional workflows to autonomous agents.
+
+**Building block: The augmented LLM**
+The basic building block of agentic systems is an LLM enhanced with augmentations such as retrieval, tools, and memory. Our current models can actively use these capabilities—generating their own search queries, selecting appropriate tools, and determining what information to retain.
+
+image::images/llm_agent_architecture_diagram.svg[]
+
+**Workflow: Prompt chaining**
+Prompt chaining decomposes a task into a sequence of steps, where each LLM call processes the output of the previous one. You can add programmatic checks (see "gate” in the diagram below) on any intermediate steps to ensure that the process is still on track.
+
+image::images/prompt_chaining_workflow.svg[]
+
+=== Use planning to help steer agent
+Save TODO list to plan and repeat objectives / steer agent (see: Manus).
+Plan for user approval (see: Claude Code plan mode, Deep Research).
+Use plan to steer agent (see: open-deep-research, Anthropic multi-agent).
+
+=== Use filesystem to offload context
+Use file system for notes (see: Drew’s post, Anthropic multi-agent).
+Use file system (e.g., todo.md) to plan/track progress (see: Manus).
+Use file system read/write tok-heavy context (see: Manus).
+Use files for long-term memories (see: Ambient Agents course/repo).
+
+=== Use sub-agents to isolate context
+Split context across multi-agents (see: Drew’s post, Anthropic).
+Delegate tasks to sub-agents (see: Claude Code task tool).
+But, be careful (see: Cognition/Walden Yan)!
+Multi-agents make conflicting decisions (see: Cognition/Walden Yan).
+Sub-agents lower risk if avoid decisions (see: open-deep-research).
+
 == How to apply context engineering
 
 * Context Engineering
@@ -108,6 +156,12 @@ Anthropic "think_tool" is an example of context offloading. Anthropics multi age
 
 Manus also perform context offloading to the filesystem. They mention this is highly useful to store token heavy tool calls. Initially manus write plans in todo.md and rewrites it during the execution.
 
+**Manus**
+Typical task in Manus requires around 50 tool calls.
+
+**Anthropic**
+Production agents often engage in conversations spanning hundreds of turns
+
 * Langgraph has something called state object which persist the data across the runs. We can use this to store and manage information outside the llm context window.
 
 [source,python]
@@ -167,3 +221,4 @@ Refrence:
 * https://www.dbreunig.com/2025/06/26/how-to-fix-your-context.html
 * https://github.com/langchain-ai/how_to_fix_your_context
 * https://github.com/langchain-ai/open_deep_research
+* https://blog.langchain.com/deep-agents/
