@@ -7,6 +7,122 @@
 3. Task Delegation (Sub-agents)
 4. Careful / Extensive Prompt Engineering
 
+== Create Agents
+
+image::images/agent_header.png[]
+
+=== What is ReAct
+
+ReAct is a framework that combines reasoning and acting to enable LLMs to solve complex problems.
+ReAct = Reasoning + Acting 
+Reasoning: LLM thinks about the problem and call the tools.
+Acting: LLM acts on the problem using the tools.
+
+image::images/agent.png[]
+
+User provide the task and then LLM operates in loop. In each iteration it will do the following:
+1. Thought: LLM thinks about the problem and call the tools.
+2. Action: LLM acts on the problem using the tools.
+3. Observation: LLM observes the result of the action.
+4. Repeat until the task is completed.
+
+[source,text]
+----
+# Create agent (model, tools, prompt)
+----
+
+image::images/simple_agent.png[]
+
+We can also inject info in the output of llm which is then calling the tools
+
+image::images/inject_state_diagram.png[]
+
+=== TODO Lists (Planning)
+
+To enable that, todo tools, write_todo and read_todo are created. The tool description below is provided to the LLM detailing when to use the todo list, what it contains, and how to read and update it.
+
+image::images/agent_header_todo.png[]
+
+[source,todo]
+----
+# TODO prompt descriptions
+ Create and manage structured task lists for tracking progress through complex workflows.                       │
+│                                                                                                                 │
+│  ## When to Use                                                                                                 │
+│  - Multi-step or non-trivial tasks requiring coordination                                                       │
+│  - When user provides multiple tasks or explicitly requests todo list                                           │
+│  - Avoid for single, trivial actions unless directed otherwise                                                  │
+│                                                                                                                 │
+│  ## Structure                                                                                                   │
+│  - Maintain one list containing multiple todo objects (content, status, id)                                     │
+│  - Use clear, actionable content descriptions                                                                   │
+│  - Status must be: pending, in_progress, or completed                                                           │
+│                                                                                                                 │
+│  ## Best Practices                                                                                              │
+│  - Only one in_progress task at a time                                                                          │
+│  - Mark completed immediately when task is fully done                                                           │
+│  - Always send the full updated list when making changes                                                        │
+│  - Prune irrelevant items to keep list focused                                                                  │
+│                                                                                                                 │
+│  ## Progress Updates                                                                                            │
+│  - Call TodoWrite again to change task status or edit content                                                   │
+│  - Reflect real-time progress; don't batch completions                                                          │
+│  - If blocked, keep in_progress and add new task describing blocker                                             │
+│                                                                                                                 │
+│  ## Parameters                                                                                                  │
+│  - todos: List of TODO items with content and status fields                                                     │
+│                                                                                                                 │
+│  ## Returns                                                                                                     │
+│  Updates agent state with new todo list.
+----
+
+
+== Context Engineering for agents
+
+* Tool calling usecase. LLM call tool and recevie the observation. This process repeat until the task is completed. Tool call observations are appended in the context window. This is token heavy.
+[source,asciidoc]
+----
+Human -> LLM <=> Tool 
+----
+
+Agent harness
+* A fw premitives
+** MODEL
+** PROMPT
+** TOOLS
+** HOOKs
+
++1 for `context engineering` over `prompt engineering`.
+
+* offload context to filesystem
+* reduce context (pruning, summarization)
+* isolate context (sub-agents)
+
+=== Offloading context 
+==== Offload to filesystem
+* Let agent write to filesystem
+* Save in persistent storage and recall when needed.
+
+This helps in reducing the context by saving the informations in the filesystem instead of context window.
+
+==== Offload actions from tools to scripts stored on filesystem
+* Using skills (scripts) instead of direct tool calls.
+* Many tools requires instrucstions that bloat the context window. So we can offload the instructions to a script using skills and call the script instead of tool.
+
+* Agent uses progressive disclosure to discover actions. It only load the header of skills and when llm actually requires the skill, it load the full skill.
+
+[NOTE]
+===
+Keep only general tools in the context window. 
+write_todos,ls,read_file,write_file,edit_file,glob,grep,task.
+===
+
+=== Reduce context window
+* Compaction : We can get the tool result and save in a file and use it later if they are not required right away.
+* Summarization : We can summarize the context if it reaches a certain threshold and use it later.
+* Filtering : We can filter the context and use it later.
+
+
 == Building effective agents
 
 Deep agents are built on two pillars:
@@ -27,6 +143,18 @@ image::images/llm_agent_architecture_diagram.svg[]
 Prompt chaining decomposes a task into a sequence of steps, where each LLM call processes the output of the previous one. You can add programmatic checks (see "gate” in the diagram below) on any intermediate steps to ensure that the process is still on track.
 
 image::images/prompt_chaining_workflow.svg[]
+
+**Workflow: Routing**
+
+image::images/routing_workflow.svg[]
+
+where routing is useful:
+
+Directing different types of customer service queries (general questions, refund requests, technical support) into different downstream processes, prompts, and tools.
+Routing easy/common questions to smaller, cost-efficient models like Claude Haiku 4.5 and hard/unusual questions to more capable models like Claude Sonnet 4.5 to optimize for best performance.
+
+image::images/agent_loop_workflow.svg[]
+
 
 === Use planning to help steer agent
 Save TODO list to plan and repeat objectives / steer agent (see: Manus).
@@ -217,8 +345,13 @@ The Langgraph bigtool library is a grate way to apply semantic search over tool 
 
 Act of isolating the context in their own dedicated threads, each uses seprately by one or more llm.
 
-Refrence:
+== Refrence:
 * https://www.dbreunig.com/2025/06/26/how-to-fix-your-context.html
 * https://github.com/langchain-ai/how_to_fix_your_context
 * https://github.com/langchain-ai/open_deep_research
 * https://blog.langchain.com/deep-agents/
+
+[NOTE]
+====
+Pictures in this document are from the langchain blog post.
+====
